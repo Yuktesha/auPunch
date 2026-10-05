@@ -55,6 +55,15 @@
 - **單一專案實測**：1.2 GB 膨脹 `.aup3` ➔ **42 MB** 輕快專案（**-96.5%** 體積削減）。
 - **大量專案批次實測**：共 127 個專案、原始總量 **77.21 GB** ➔ 抽脂後僅剩 **9.90 GB**（**淨省 67.31 GB，整體瘦身率達 -87.2%**）！
 
+### 🥚 命名的雙重隱喻彩蛋 (Name Origin: aup undo rich)
+
+「**auPunch**」看似是直覺強悍的「重拳抽脂（Punch）」，但背後其實隱藏著一段絕妙的文字學密碼：
+
+$$\textbf{aup} + \textbf{un}\text{(do) }\textbf{ch}\text{(from rich)} \implies \textbf{auPunch}$$
+$$(\text{亦即 } \textbf{aup undo rich} \text{ / } \textbf{aup un-rich})$$
+
+Audacity 3.x 強塞的 SQLite 資料庫美其名讓專案變「豐富完整（Rich）」，實則帶來了動輒數 GB 的沉重肥胖枷鎖。**auPunch** 的初心正是 **「aup undo rich」** —— 逆轉過度封裝的虛胖架構、替專案徹底去油解膩，以極具衝擊力的一記重拳（Punch），重拾創作應有的輕快純粹！
+
 ---
 
 ## 🌟 核心特色
@@ -140,6 +149,15 @@ Starting from Audacity 3.0, the project format transitioned to a monolithic SQLi
 ### 📊 Benchmark Results
 - **Single Project**: 1.2 GB `.aup3` ➔ **42 MB** slim project (**-96.5%** reduction).
 - **Batch Processing**: 127 projects totaling **77.21 GB** ➔ slimmed down to **9.90 GB** (**saved 67.31 GB, -87.2% overall space saved**)!
+
+### 🥚 The Hidden Metaphor: "aup undo rich"
+
+While **auPunch** immediately conveys a heavyweight knockout punch delivered to bloated databases, the name holds a brilliant linguistic Easter egg:
+
+$$\textbf{aup} + \textbf{un}\text{(do) }\textbf{ch}\text{(from rich)} \implies \textbf{auPunch}$$
+$$(\text{or } \textbf{aup undo rich} \text{ / } \textbf{aup un-rich})$$
+
+Audacity 3.x's SQLite monolithic database was marketed as making projects "richer", but in reality, it burdened creators with multi-gigabyte bloat and fragile I/O overhead. **auPunch** literally originated from the philosophy of **"aup undo rich"** — undoing the over-engineered bloat, un-riching the excessive overhead, and delivering freedom back to the user with a single decisive punch!
 
 ---
 
