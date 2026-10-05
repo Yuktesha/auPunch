@@ -50,9 +50,11 @@ class Aup3Converter:
         
         out_proj_dir = Path(output_dir) / proj_base_name
         out_media_dir = out_proj_dir / "media"
+        out_data_dir = out_proj_dir / f"{proj_base_name}_data"
         out_aup_file = out_proj_dir / f"{proj_base_name}.aup"
         
         out_media_dir.mkdir(parents=True, exist_ok=True)
+        out_data_dir.mkdir(parents=True, exist_ok=True)
         
         temp_work_dir = out_proj_dir / "_temp_extract"
         if temp_work_dir.exists():
