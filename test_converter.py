@@ -40,7 +40,12 @@ class TestAup3ConverterSmartClips(unittest.TestCase):
       <sequence maxsamples="262144" sampleformat="262159" numsamples="262144">
         <waveblock start="0" />
       </sequence>
-      <envelope numpoints="0" />
+      <envelope numpoints="4">
+        <controlpoint t="0.00000000" val="0.00000000" />
+        <controlpoint t="1.50000000" val="1.00000000" />
+        <controlpoint t="8.50000000" val="1.00000000" />
+        <controlpoint t="10.00000000" val="0.00000000" />
+      </envelope>
     </waveclip>
   </wavetrack>
 </project>
@@ -115,6 +120,17 @@ class TestAup3ConverterSmartClips(unittest.TestCase):
         alias2_0 = wbs2[0].find(qn("pcmaliasblockfile"))
         self.assertIsNotNone(alias2_0)
         self.assertEqual(alias2_0.get("aliasfile"), "media/1_Guitar_0_Clip1.flac")
+        
+        # Envelope check (Volume automation / Crossfade curves preserved!)
+        env2 = clip2.find(qn("envelope"))
+        self.assertIsNotNone(env2)
+        self.assertEqual(env2.get("numpoints"), "4")
+        cps = env2.findall(qn("controlpoint"))
+        self.assertEqual(len(cps), 4)
+        self.assertEqual(cps[0].get("t"), "0.00000000")
+        self.assertEqual(cps[0].get("val"), "0.00000000")
+        self.assertEqual(cps[1].get("val"), "1.00000000")
+        self.assertEqual(cps[3].get("val"), "0.00000000")
 
     def test_xml_transformation_single_track_fallback(self):
         sample_xml = """<?xml version="1.0" standalone="no" ?>

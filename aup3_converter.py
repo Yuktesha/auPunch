@@ -10,6 +10,7 @@ import os
 import sys
 import shutil
 import subprocess
+import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 import re
@@ -58,29 +59,35 @@ class Aup3Converter:
         out_media_dir.mkdir(parents=True, exist_ok=True)
         out_data_dir.mkdir(parents=True, exist_ok=True)
         
-        temp_work_dir = out_proj_dir / "_temp_extract"
-        if temp_work_dir.exists():
-            shutil.rmtree(temp_work_dir)
-        temp_work_dir.mkdir(parents=True, exist_ok=True)
-        
-        temp_aup3 = temp_work_dir / aup3_path.name
+        # 避免 Windows 260 字元 MAX_PATH 限制，使用標準暫存目錄並以 proj.aup3 短路徑解包
+        temp_work_dir = Path(tempfile.mkdtemp(prefix="aup_"))
+        temp_aup3 = temp_work_dir / "proj.aup3"
         shutil.copy2(aup3_path, temp_aup3)
         
         try:
             # 1. 導出專案 XML 結構
-            cmd_xml = [self.tool_path, "-extract_project", str(temp_aup3)]
+            cmd_xml = [self.tool_path, "-extract_project", "proj.aup3"]
             res_xml = subprocess.run(cmd_xml, cwd=str(temp_work_dir), capture_output=True, text=True, encoding='utf-8', errors='ignore')
             
-            extracted_xml = temp_work_dir / f"{temp_aup3.name}.project.xml"
+            extracted_xml = temp_work_dir / "proj.aup3.project.xml"
             if not extracted_xml.exists():
                 raise RuntimeError(f"無法導出專案結構 XML: {res_xml.stderr or res_xml.stdout}")
                 
             # 2. 優先嘗試導出各片段獨立音訊 (Clips 模式 - 保持各軌獨立與非破壞性手柄)
-            cmd_clips = [self.tool_path, "-extract_clips", str(temp_aup3)]
+            cmd_clips = [self.tool_path, "-extract_clips", "proj.aup3"]
             subprocess.run(cmd_clips, cwd=str(temp_work_dir), capture_output=True, text=True, encoding='utf-8', errors='ignore')
             
-            clips_dir = temp_work_dir / "clips"
-            clip_wav_files = sorted(list(clips_dir.glob("*.wav"))) if clips_dir.exists() else []
+            # 尋找 clips 目錄 (audacity-project-tools 預設置於 proj_data/clips)
+            found_clip_dirs = list(temp_work_dir.glob("**/clips"))
+            clips_dir = found_clip_dirs[0] if found_clip_dirs else (temp_work_dir / "clips")
+            
+            def clip_sort_key(f):
+                m = re.match(r'^(\d+)_(.*)_(\d+)_(.*)\.wav$', f.name)
+                if m:
+                    return (int(m.group(1)), int(m.group(3)))
+                return (999999, f.name)
+                
+            clip_wav_files = sorted(list(clips_dir.glob("*.wav")), key=clip_sort_key) if clips_dir.exists() else []
             
             final_audio_paths = []
             clips_count = 0
@@ -108,20 +115,26 @@ class Aup3Converter:
                         shutil.move(str(wav_f), str(final_audio_path))
                         
                     final_audio_paths.append(final_audio_path)
-                    clip_media_map[wav_f.name] = f"media/{dest_audio_name}"
+                    
+                    # 建立精準的 (track_idx, clip_idx) 索引映射
+                    m = re.match(r'^(\d+)_(.*)_(\d+)_(.*)\.wav$', wav_f.name)
+                    rel_p = f"media/{dest_audio_name}"
+                    if m:
+                        clip_media_map[(int(m.group(1)), int(m.group(3)))] = rel_p
+                    clip_media_map[wav_f.name] = rel_p
                 
-                clips_count = len(clip_media_map)
+                clips_count = len(clip_wav_files)
                 self._transform_xml(extracted_xml, out_aup_file, proj_base_name, clip_media_map=clip_media_map)
             else:
                 # ── 模式 B: 回退單一混音音軌導出 (適用於單軌專案或無法分解之專案) ──
-                cmd_audio = [self.tool_path, "-extract_as_stereo_track", str(temp_aup3)]
+                cmd_audio = [self.tool_path, "-extract_as_stereo_track", "proj.aup3"]
                 res_audio = subprocess.run(cmd_audio, cwd=str(temp_work_dir), capture_output=True, text=True, encoding='utf-8', errors='ignore')
                 
-                temp_data_dir = temp_work_dir / f"{proj_base_name}_data"
+                temp_data_dir = temp_work_dir / "proj_data"
                 extracted_wav = temp_data_dir / "stereo.wav"
                 
                 if not extracted_wav.exists():
-                    cmd_mono = [self.tool_path, "-extract_as_mono_track", str(temp_aup3)]
+                    cmd_mono = [self.tool_path, "-extract_as_mono_track", "proj.aup3"]
                     subprocess.run(cmd_mono, cwd=str(temp_work_dir), capture_output=True, text=True)
                     extracted_wav = temp_data_dir / "mono.wav"
                     
@@ -203,7 +216,7 @@ class Aup3Converter:
         clip_rel_paths = list(clip_media_map.values()) if clip_media_map else []
         clip_idx = 0
 
-        for track in root.findall(qn('wavetrack')):
+        for t_idx, track in enumerate(root.findall(qn('wavetrack'))):
             ch = track.get('channel', '0')
             orig_linked = track.get('linked', None)
             if orig_linked is None:
@@ -214,7 +227,7 @@ class Aup3Converter:
                 if c.tag == qn('effects'):
                     track.remove(c)
                     
-            for clip in track.findall(qn('waveclip')):
+            for c_idx, clip in enumerate(track.findall(qn('waveclip'))):
                 # 僅移除不相容的效果與色彩屬性，嚴格保留 trimLeft 與 trimRight（3.x 智慧手柄）
                 for attr in ['centShift', 'pitchAndSpeedPreset', 'rawAudioTempo', 'clipStretchRatio', 'colorindex']:
                     if attr in clip.attrib:
@@ -228,8 +241,11 @@ class Aup3Converter:
                     if 'effectivesampleformat' in seq.attrib:
                         del seq.attrib['effectivesampleformat']
                     
-                    # 決定此 Clip 指向的音訊檔案路徑
-                    if clip_rel_paths and clip_idx < len(clip_rel_paths):
+                    # 決定此 Clip 指向的音訊檔案路徑 (優先依 (t_idx, c_idx) 精準對齊)
+                    if clip_media_map and (t_idx, c_idx) in clip_media_map:
+                        cur_media_rel = clip_media_map[(t_idx, c_idx)]
+                        is_clip_isolated = True
+                    elif clip_rel_paths and clip_idx < len(clip_rel_paths):
                         cur_media_rel = clip_rel_paths[clip_idx]
                         clip_idx += 1
                         is_clip_isolated = True
