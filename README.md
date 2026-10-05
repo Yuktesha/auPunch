@@ -81,7 +81,10 @@ Audacity 3.x 強塞的 SQLite 資料庫美其名讓專案變「豐富完整（Ri
 4. **🔍 智慧 Audacity 探測與前台連動（Smart Dispatcher）**：
    - 自動探測系統已安裝之 Audacity（Program Files, LocalAppData, PATH, Registry）或伴隨的可攜版（`AudacityPortable\audacity.exe`），亦可在 GUI 中隨選指定路徑。
    - 轉檔完成後可自動以前台視窗喚起 Audacity 載入專案進行剪輯。
-5. **🎯 檔案總管右鍵選單整合（Context Menu Integration）**：
+5. **🎛️ 多軌獨立片段萃取與 3.x 智慧手柄保留（Multi-Clip & Smart Clips Preservation）**：
+   - 徹底告別單一混音音檔的粗糙做法，優先將多軌工程中各個獨立 Clip 萃取為專屬的無損 FLAC，純淨隔離、軌道獨立。
+   - 在專案 XML 中嚴格保留 Audacity 3.x 智慧手柄屬性（`trimLeft` 與 `trimRight`）。以 **Audacity 3.x** 開啟時即時還原非破壞性裁剪手柄，任意拖曳展開邊界；以 **Audacity 2.4.2** 開啟時無縫相容，享受「2.x 存檔極致小巧 ＋ 3.x 剪輯現代 DAW」的終極體驗！
+6. **🎯 檔案總管右鍵選單整合（Context Menu Integration）**：
    - 提供 `關聯選單設定.ps1`，免管理員提權即可在 Windows 檔案總管右鍵加入「🥊 使用 auPunch 輕快開啟」。
    - 點擊 `.aup`（2.x）➔ 秒開 Audacity！
    - 點擊 `.aup3`（3.x）➔ 自動極速抽脂為 2.4.2++ 後秒開專案！
@@ -176,7 +179,10 @@ Audacity 3.x's SQLite monolithic database was marketed as making projects "riche
 4. **🔍 Smart Audacity Dispatcher**:
    - Automatically discovers local Audacity installations (`Program Files`, `LocalAppData`, `PATH`, Registry) or bundled companion portable versions (`AudacityPortable\audacity.exe`), with full manual path override in GUI.
    - Seamlessly launches the converted project in Audacity after processing.
-5. **🎯 Windows Explorer Context Menu**:
+5. **🎛️ Multi-Clip Isolation & 3.x Smart Clips Preservation**:
+   - Replaces coarse single-mixdown flattening with granular multi-clip extraction, preserving track independence across complex arrangements.
+   - Strictly preserves Audacity 3.x Smart Clip trimming metadata (`trimLeft` and `trimRight`). Opening the project in **Audacity 3.x** immediately restores non-destructive trimming handles on each clip, while opening in **Audacity 2.4.2** functions smoothly with bit-perfect audio waveforms — delivering the ultimate hybrid workflow: 2.x ultra-compact storage + 3.x modern DAW editing flexibility!
+6. **🎯 Windows Explorer Context Menu**:
    - Provides `關聯選單設定.ps1` to register right-click shortcuts without needing Administrator UAC elevation.
    - Click `.aup` (2.x) ➔ Opens Audacity instantly!
    - Click `.aup3` (3.x) ➔ Fast background slimming and immediate launch!
