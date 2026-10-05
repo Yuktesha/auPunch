@@ -1,0 +1,53 @@
+KEY	zh_TW (繁體中文)	en_US (English)	zh_CN (简体中文)	ja_JP (日本語)
+# --- 軟體名稱與標語 ---
+app_title	auPunch - Audacity 專案抽脂重砲工具	auPunch - Audacity Project Slimming Tool	auPunch - Audacity 项目抽脂工具	auPunch - Audacity プロジェクト軽量化ツール
+slogan1	“Punch your Audacity 3.x projects down to 2.4.2 & FLAC with zero hassle.”	“Punch your Audacity 3.x projects down to 2.4.2 & FLAC with zero hassle.”	“Punch your Audacity 3.x projects down to 2.4.2 & FLAC with zero hassle.”	“Punch your Audacity 3.x projects down to 2.4.2 & FLAC with zero hassle.”
+slogan2	“auPunch: Heavyweight project conversion, lightweight files.”	“auPunch: Heavyweight project conversion, lightweight files.”	“auPunch: Heavyweight project conversion, lightweight files.”	“auPunch: Heavyweight project conversion, lightweight files.”
+subtitle	一拳重擊 SQLite 肥胖怪獸，一鍵回歸 2.4.2 輕快殿堂！	Knock out SQLite project bloat. Keep pure lossless sound.	重拳击碎 SQLite 膨胀怪兽，一键重回 2.4.2 轻快殿堂！	肥大化した SQLite プロジェクトを撃破し、軽量な 2.4.2 へ！
+desc	專門將 Audacity 3.x 膨脹的 SQLite 資料庫專案 (.aup3) 抽脂轉換為 Audacity 2.4.2++ 輕快架構 (.aup + media/ 外部音訊)，預設無損高效 FLAC 壓縮，平均瘦身 70%~96%！	Converts bloated Audacity 3.x SQLite database projects (.aup3) into lightweight Audacity 2.4.2++ architecture (.aup + media/ external referenced audio), defaulting to lossless FLAC with 70%~96% disk space saved!	专用于将 Audacity 3.x 膨胀的 SQLite 数据库项目 (.aup3) 抽脂转换为 Audacity 2.4.2++ 轻快架构 (.aup + media/ 外部音频)，默认无损高效 FLAC 压缩，平均瘦身 70%~96%！	Audacity 3.x の肥大化した SQLite データベース (.aup3) を、Audacity 2.4.2++ アーキテクチャ (.aup + media/) に変換します。デフォルトで可逆圧縮 FLAC を使用し、平均 70%〜96% 容量削減！
+
+# --- 命令列參數說明 ---
+usage	用法	Usage	用法	使用方法
+options	命令列參數選項	Options	命令行参数选项	コマンドラインオプション
+opt_source	來源路徑 (可為 .7z 壓縮檔或包含 .aup3 的資料夾)	Source path (.7z archive or directory containing .aup3 files)	源路径 (可为 .7z 压缩包或包含 .aup3 的文件夹)	ソースパス (.7z または .aup3 を含むフォルダ)
+opt_output	輸出目錄 (轉檔後專案存放位置)	Output directory for converted slim projects	输出目录 (转换后项目保存位置)	出力ディレクトリ（変換後プロジェクト保存先）
+opt_wav	指定輸出標準未壓縮 WAV (預設為無損高效 FLAC)	Output uncompressed WAV instead of default lossless FLAC	指定输出标准未压缩 WAV (默认无损高效 FLAC)	非圧縮 WAV を出力（デフォルトは可逆 FLAC）
+opt_limit	限制模式：僅處理前 N 個專案 (測試用)	Limit processing to the first N projects (for testing)	限制模式：仅处理前 N 个项目 (测试用)	処理を最初の N 件に制限（テスト用）
+opt_edit	轉換完成後，自動以 Audacity 前台開啟專案 (自動偵測可攜版或本機安裝版)	Automatically open the converted project in Audacity (portable or installed)	转换完成后，自动使用 Audacity 前台打开项目 (自动检测便携版或本机安装版)	変換完了後、Audacity でプロジェクトを開く（ポータブル版またはインストール版）
+opt_gui	啟動圖形化使用者介面 (GUI)	Launch the Graphical User Interface (GUI)	启动图形化用户界面 (GUI)	グラフィカルユーザーインターフェース (GUI) を起動
+opt_help	顯示此說明訊息並離開	Show this help message and exit	显示此帮助信息并退出	ヘルプメッセージを表示して終了
+examples	使用範例	Examples	使用示例	使用例
+ex1	批次抽脂本機資料夾內所有專案 (預設 FLAC 極限瘦身)	Batch convert all projects in a directory (default FLAC extreme slimming)	批量抽脂本地文件夹内所有项目 (默认 FLAC 极限瘦身)	フォルダ内の全プロジェクトを一括軽量化（デフォルト FLAC）
+ex2	串流滾動抽脂 7z 壓縮檔 (零硬碟膨脹壓力)	Stream-convert projects directly from 7z archive without pre-extracting	流式滚动抽脂 7z 压缩包 (零磁盘膨胀压力)	7z 書庫から直接ストリーミング変換（ディスク容量節約）
+ex3	抽脂完成後自動以 Audacity 開啟專案編輯	Convert and immediately open in Audacity for editing	抽脂完成后自动使用 Audacity 打开项目编辑	変換完了後、自動的に Audacity で開いて編集
+ex4	啟動圖形化介面 (GUI)	Launch graphical interface (GUI)	启动图形化界面 (GUI)	GUI を起動
+
+# --- GUI 介面字串 ---
+gui_title	auPunch - Audacity 專案抽脂重砲工具	auPunch - Audacity Project Slimming Tool	auPunch - Audacity 项目抽脂工具	auPunch - Audacity プロジェクト軽量化ツール
+gui_source_group	步驟 1: 來源專案 (支援資料夾或 7z 壓縮檔)	Step 1: Source Projects (Folder or .7z Archive)	步骤 1: 源项目 (支持文件夹或 7z 压缩包)	ステップ 1: ソースプロジェクト (フォルダまたは 7z 書庫)
+gui_dest_group	步驟 2: 轉檔目的地目錄	Step 2: Destination Directory	步骤 2: 转换目标目录	ステップ 2: 出力先ディレクトリ
+gui_opt_group	步驟 3: 轉換與外部編輯設定	Step 3: Conversion & External Editor Settings	步骤 3: 转换与外部编辑器设置	ステップ 3: 変換と外部エディタ設定
+gui_btn_folder	選擇資料夾	Select Folder	选择文件夹	フォルダ選択
+gui_btn_archive	選擇 7z 壓縮檔	Select 7z Archive	选择 7z 压缩包	7z 書庫選択
+gui_btn_browse	瀏覽目錄	Browse Folder	浏览目录	フォルダ参照
+gui_fmt_flac	無損高效 FLAC (推薦：體積大砍 70%~96%，音質 100% 零減損)	Lossless FLAC (Recommended: 70%~96% smaller, 100% bit-perfect audio)	无损高效 FLAC (推荐：体积砍掉 70%~96%，音质 100% 零损失)	可逆圧縮 FLAC (推奨: 容量 70%〜96% 削減、音質劣化ゼロ)
+gui_fmt_wav	標準未壓縮 WAV (最大相容性模式)	Standard Uncompressed WAV (Maximum Compatibility)	标准未压缩 WAV (最大兼容性模式)	標準非圧縮 WAV (最大互換性モード)
+gui_chk_edit	轉換完成後以 Audacity 開啟專案	Open project in Audacity when finished	转换完成后使用 Audacity 打开项目	変換完了後 Audacity でプロジェクトを開く
+gui_lbl_audacity_path	Audacity 路徑：	Audacity Path:	Audacity 路径：	Audacity パス:
+gui_btn_audacity	指定路徑...	Browse...	指定路径...	参照...
+gui_audacity_detected	[已偵測到 Audacity]	[Audacity Detected]	[已检测到 Audacity]	[Audacity 検出済み]
+gui_audacity_not_found	(未偵測到 Audacity，若需自動開啟請點選「指定路徑」手動選取)	(Audacity not detected; click Browse to locate if auto-open is desired)	(未检测到 Audacity，如需自动打开请点击“指定路径”手动选取)	(Audacity 未検出。自動起動が必要な場合は「参照」で指定してください)
+gui_action_group	步驟 4: 執行與進度	Step 4: Execution & Progress	步骤 4: 执行与进度	ステップ 4: 実行と進捗
+gui_btn_start	開始抽脂重擊 (Start Punch)	Start Punch (Slim Down Projects)	开始抽脂转换 (Start Punch)	軽量化を実行 (Start Punch)
+gui_btn_running	正在抽脂重擊中...	Punching in progress...	正在转换中...	軽量化処理中...
+gui_status_ready	準備就緒。請指定來源與目的地後點選「開始抽脂重擊」。	Ready. Select source and destination, then click "Start Punch".	就绪。指定源与目标后点击“开始抽脂转换”。	準備完了。ソースと出力先を指定し「軽量化を実行」をクリックしてください。
+gui_status_processing	[{current:03d}/{total:03d}] 正在處理: {name}	[{current:03d}/{total:03d}] Processing: {name}	[{current:03d}/{total:03d}] 正在处理: {name}	[{current:03d}/{total:03d}] 処理中: {name}
+gui_status_skipped	[{current:03d}/{total:03d}] [跳過已存在] {name}	[{current:03d}/{total:03d}] [Skipped: exists] {name}	[{current:03d}/{total:03d}] [跳过已存在] {name}	[{current:03d}/{total:03d}] [スキップ: 既存] {name}
+gui_complete_msg	批次抽脂轉換全部完成！	All projects have been successfully converted!	批量转换全部完成！	すべてのプロジェクトの変換が完了しました！
+gui_err_no_source	請先指定正確的來源專案檔案或資料夾！	Please select a valid source project folder or archive!	请先指定正确的源项目文件或文件夹！	有効なソースフォルダまたは書庫を指定してください！
+gui_err_no_dest	請指定轉檔目的地目錄！	Please select a destination directory!	请指定转换目标目录！	出力先ディレクトリを指定してください！
+gui_warn_no_audacity	系統中未偵測到 Audacity，無法自動開啟專案。\n請手動安裝或點選「指定路徑」選取 audacity.exe。	Audacity was not found on your system.\nPlease install Audacity or click Browse to select audacity.exe manually.	系统中未检测到 Audacity，无法自动打开项目。\n请手动安装或点击“指定路径”选取 audacity.exe。	Audacity が検出されなかったため、自動起動できません。\nインストールするか「参照」で audacity.exe を指定してください。
+gui_log_title	即時處理日誌	Live Processing Log	即时处理日志	リアルタイムログ
+gui_theme_btn	切換主題 (Ctrl+T)	Theme (Ctrl+T)	切换主题 (Ctrl+T)	テーマ切替 (Ctrl+T)
+gui_footer_studio	A Solid GUI Studio X MVlab	A Solid GUI Studio X MVlab	A Solid GUI Studio X MVlab	A Solid GUI Studio X MVlab
+gui_footer_version	auPunch v1.0.0 | Audacity 3.x ➔ 2.4.2++ 抽脂轉換器	auPunch v1.0.0 | Audacity 3.x ➔ 2.4.2++ Slimmer	auPunch v1.0.0 | Audacity 3.x ➔ 2.4.2++ 抽脂转换器	auPunch v1.0.0 | Audacity 3.x ➔ 2.4.2++ コンバーター
