@@ -116,12 +116,12 @@ class Aup3Converter:
                         
                     final_audio_paths.append(final_audio_path)
                     
-                    # 建立精準的 (track_idx, clip_idx) 索引映射
+                    # 建立精準的 (track_idx, clip_idx) 索引映射 (Audacity 要求 aliasfile 必須為絕對路徑)
                     m = re.match(r'^(\d+)_(.*)_(\d+)_(.*)\.wav$', wav_f.name)
-                    rel_p = f"media/{dest_audio_name}"
+                    abs_p = str(final_audio_path.resolve()).replace('\\', '/')
                     if m:
-                        clip_media_map[(int(m.group(1)), int(m.group(3)))] = rel_p
-                    clip_media_map[wav_f.name] = rel_p
+                        clip_media_map[(int(m.group(1)), int(m.group(3)))] = abs_p
+                    clip_media_map[wav_f.name] = abs_p
                 
                 clips_count = len(clip_wav_files)
                 self._transform_xml(extracted_xml, out_aup_file, proj_base_name, clip_media_map=clip_media_map)
@@ -161,8 +161,8 @@ class Aup3Converter:
                     
                 final_audio_paths.append(final_audio_path)
                 clips_count = 1
-                media_rel_path = f"media/{dest_audio_name}"
-                self._transform_xml(extracted_xml, out_aup_file, proj_base_name, single_media_rel_path=media_rel_path)
+                abs_media_path = str(final_audio_path.resolve()).replace('\\', '/')
+                self._transform_xml(extracted_xml, out_aup_file, proj_base_name, single_media_rel_path=abs_media_path)
             
             # 計算轉換後總容量
             final_aup_size = out_aup_file.stat().st_size
