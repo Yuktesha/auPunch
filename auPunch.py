@@ -57,6 +57,7 @@ def print_localized_help(lang=None):
     print(f"⚙️  {t('options')}:")
     print(f"    -s, --source <path>     {t('opt_source')}")
     print(f"    -o, --output <dir>      {t('opt_output')}")
+    print(f"    -t, --target <format>   {t('opt_target')}")
     print(f"    --wav                   {t('opt_wav')}")
     print(f"    --limit <N>             {t('opt_limit')}")
     print(f"    --edit                  {t('opt_edit')}")
@@ -68,17 +69,18 @@ def print_localized_help(lang=None):
     print(f"    2. {t('ex2')}:")
     print('       python auPunch.py --source "C:\\audacity_projects.7z" --output "C:\\slim_out"\n')
     print(f"    3. {t('ex3')}:")
-    print('       python auPunch.py --source "C:\\MyProjects" --edit\n')
+    print('       python auPunch.py --source "C:\\MyProjects" --target aup\n')
     print(f"    4. {t('ex4')}:")
     print('       python auPunch.py --gui\n')
     print("-" * 70)
     print("A Solid GUI Studio X MVlab")
 
 class AuPunchRunner:
-    def __init__(self, source_path, output_dir, scratch_dir=None, seven_zip=r"C:\scoop\shims\7z.exe", use_wav=False):
+    def __init__(self, source_path, output_dir, scratch_dir=None, seven_zip=r"C:\scoop\shims\7z.exe", use_wav=False, target="ardour"):
         self.source_path = Path(source_path).resolve()
         self.output_dir = Path(output_dir).resolve()
         self.use_wav = use_wav
+        self.target = target
         
         base_dir = Path(__file__).resolve().parent
         if scratch_dir is None:
@@ -124,6 +126,13 @@ class AuPunchRunner:
                         "size": f.stat().st_size
                     })
             projects.sort(key=lambda x: x['base_name'])
+        elif self.source_path.is_file() and self.source_path.suffix.lower() == '.aup3':
+            projects.append({
+                "type": "local",
+                "path": self.source_path,
+                "base_name": self.source_path.stem,
+                "size": self.source_path.stat().st_size
+            })
         else:
             raise FileNotFoundError(f"找不到指定的來源檔案或目錄: {self.source_path}")
 
@@ -138,7 +147,9 @@ class AuPunchRunner:
         total_orig_bytes = sum(p['size'] for p in projects)
         audio_fmt_str = "標準未壓縮 WAV (最高相容性)" if self.use_wav else "預設無損高效 FLAC (極限壓縮，體積砍 70%~96%)"
         source_mode_str = f"7z 壓縮檔滾動串流 ({self.source_path.name})" if self.is_archive else f"本地母體目錄直接抽脂 ({self.source_path})"
+        target_mode_str = "原生 Ardour DAW 會話工程 (.ardour)" if self.target == "ardour" else "Audacity 2.4.2++ 舊版相容 (.aup)"
         print(f"[+] 來源模式: {source_mode_str}")
+        print(f"[+] 目標格式: {target_mode_str}")
         print(f"[+] 專案總計未壓縮體積約: {total_orig_bytes / (1024**3):.2f} GB")
         print(f"[+] 音訊壓縮格式: {audio_fmt_str}")
         print(f"[+] 輸出目標目錄: {self.output_dir}")
@@ -172,10 +183,14 @@ class AuPunchRunner:
             orig_size_mb = p['size'] / (1024*1024)
             
             proj_out_dir = self.output_dir / base_name
-            target_aup = proj_out_dir / f"{base_name}.aup"
-            target_media = proj_out_dir / "media"
+            if self.target == "ardour":
+                target_file = proj_out_dir / f"{base_name}.ardour"
+                target_media = proj_out_dir / "interchange" / base_name / "audiofiles"
+            else:
+                target_file = proj_out_dir / f"{base_name}.aup"
+                target_media = proj_out_dir / "media"
             
-            if target_aup.exists() and target_media.exists() and any(target_media.iterdir()):
+            if target_file.exists() and target_media.exists() and any(target_media.iterdir()):
                 print(f"[{idx:03d}/{len(projects):03d}] ⏭️ [跳過 - 已存在] {base_name}")
                 skipped_count += 1
                 continue
@@ -216,10 +231,11 @@ class AuPunchRunner:
 
             fmt_label = "WAV" if self.use_wav else "FLAC"
             step_label = "2/3" if self.is_archive else "1/2"
-            print(f"    ├─ [{step_label}] 執行抽脂與 2.4.2++ 結構轉換 ({fmt_label})...")
+            target_name_str = "Ardour DAW 會話工程" if self.target == "ardour" else "Audacity 2.4.2++"
+            print(f"    ├─ [{step_label}] 執行抽脂並轉換至 {target_name_str} ({fmt_label})...")
             t1 = time.time()
             try:
-                res = self.converter.convert(target_aup3_to_convert, self.output_dir, use_wav=self.use_wav)
+                res = self.converter.convert(target_aup3_to_convert, self.output_dir, use_wav=self.use_wav, target=self.target)
                 conv_duration = time.time() - t1
                 
                 saved_mb = res['saved_size'] / (1024*1024)
@@ -298,17 +314,18 @@ def main():
         default_source = default_7z
         default_out = r"C:\_MyData\_Workfiles_\Download\Suno\audacity_projects_slim"
 
-    parser = argparse.ArgumentParser(description="auPunch: Punch your Audacity 3.x projects down to 2.4.2 & FLAC (MVlab)", add_help=False)
-    parser.add_argument("--source", "-s", default=default_source, help="Source path (.7z archive or directory containing .aup3 files)")
+    parser = argparse.ArgumentParser(description="auPunch: Punch your Audacity 3.x projects into Native Ardour DAW Sessions & FLAC (MVlab)", add_help=False)
+    parser.add_argument("--source", "-s", default=default_source, help="Source path (.7z archive, directory containing .aup3 files, or single .aup3)")
     parser.add_argument("--output", "-o", default=default_out, help="Output destination directory")
+    parser.add_argument("--target", "-t", choices=["ardour", "aup"], default="ardour", help="Target DAW project format: 'ardour' (default) or 'aup'")
     parser.add_argument("--scratch", default=None, help="Scratch directory for single file archive extraction")
     parser.add_argument("--wav", action="store_true", help="Output uncompressed WAV instead of default FLAC")
     parser.add_argument("--limit", type=int, help="Limit processing to first N projects")
-    parser.add_argument("--edit", action="store_true", help="Automatically open project in Audacity when finished")
+    parser.add_argument("--edit", action="store_true", help="Automatically open project when finished")
     parser.add_argument("--gui", "-g", action="store_true", help="Launch Graphical User Interface")
 
     args = parser.parse_args()
-    runner = AuPunchRunner(args.source, args.output, scratch_dir=args.scratch, use_wav=args.wav)
+    runner = AuPunchRunner(args.source, args.output, scratch_dir=args.scratch, use_wav=args.wav, target=args.target)
     runner.run(limit=args.limit)
 
     if args.edit:

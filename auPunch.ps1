@@ -6,6 +6,7 @@
 param(
     [string]$Source = "",
     [string]$Output = "",
+    [string]$Target = "ardour",
     [switch]$Wav,
     [switch]$Edit,
     [switch]$GUI,
@@ -31,6 +32,7 @@ if ($GUI -or $G) {
 $ArgsList = @($PyScript)
 if ($Source) { $ArgsList += @("--source", $Source) }
 if ($Output) { $ArgsList += @("--output", $Output) }
+if ($Target) { $ArgsList += @("--target", $Target) }
 if ($Wav) { $ArgsList += "--wav" }
 if ($Edit) { $ArgsList += "--edit" }
 if ($Limit -gt 0) { $ArgsList += @("--limit", $Limit.ToString()) }
