@@ -28,13 +28,11 @@ import _lib.UniversalUI as UniversalUI
 from _lib import i18n
 from i18n import detect_language, get_text, t
 from aup3_converter import Aup3Converter
-from auPunchLauncher import find_audacity_exe, launch_audacity
 
 class AuPunchGUI:
     """
     auPunch GUI Controller & View
-    Manages UI state, responsive layout, background worker threading,
-    and external Audacity integration.
+    Manages UI state, responsive layout, and background worker threading.
     """
     def __init__(self, app_wrapper, default_source="", default_output=""):
         self.app = app_wrapper
@@ -52,20 +50,12 @@ class AuPunchGUI:
         saved_src = self.app.config.get("last_source", default_source)
         saved_out = self.app.config.get("last_output", default_output)
         saved_fmt = self.app.config.get("format", "flac")
-        saved_target = self.app.config.get("target", "ardour")
         saved_edit = self.app.config.get("auto_open", False)
-        saved_audacity = self.app.config.get("audacity_path", "")
-
-        # Detect Audacity executable
-        detected_audacity = find_audacity_exe(saved_audacity if saved_audacity else None)
-        audacity_initial_str = str(detected_audacity) if detected_audacity else ""
 
         self.source_var = tk.StringVar(value=saved_src)
         self.output_var = tk.StringVar(value=saved_out)
         self.format_var = tk.StringVar(value=saved_fmt)
-        self.target_var = tk.StringVar(value=saved_target)
-        self.edit_var = tk.BooleanVar(value=saved_edit and bool(detected_audacity))
-        self.audacity_path_var = tk.StringVar(value=audacity_initial_str)
+        self.edit_var = tk.BooleanVar(value=saved_edit)
         self.status_var = tk.StringVar(value=t('gui_status_ready'))
         self.progress_var = tk.DoubleVar(value=0.0)
 
@@ -195,27 +185,6 @@ class AuPunchGUI:
         self.grp_opts = ttk.LabelFrame(self.main_container, text=t('gui_opt_group'), padding=10)
         self.grp_opts.pack(fill=tk.X, pady=(0, 8))
 
-        # 目標 DAW 格式選擇 (Ardour vs Audacity AUP)
-        self.rb_target_ardour = ttk.Radiobutton(
-            self.grp_opts,
-            text=t('gui_target_ardour'),
-            value="ardour",
-            variable=self.target_var
-        )
-        self.rb_target_ardour.pack(anchor=tk.W, pady=(0, 2))
-
-        self.rb_target_aup = ttk.Radiobutton(
-            self.grp_opts,
-            text=t('gui_target_aup'),
-            value="aup",
-            variable=self.target_var
-        )
-        self.rb_target_aup.pack(anchor=tk.W, pady=(0, 6))
-
-        # 分隔線
-        sep_target = ttk.Separator(self.grp_opts, orient=tk.HORIZONTAL)
-        sep_target.pack(fill=tk.X, pady=4)
-
         # 格式選擇 (FLAC vs WAV)
         self.rb_flac = ttk.Radiobutton(
             self.grp_opts,
@@ -237,37 +206,13 @@ class AuPunchGUI:
         sep = ttk.Separator(self.grp_opts, orient=tk.HORIZONTAL)
         sep.pack(fill=tk.X, pady=4)
 
-        # Audacity 連動設定 (外部編輯器)
+        # 轉換完成後自動開啟成果目錄
         self.chk_edit = ttk.Checkbutton(
             self.grp_opts,
             text=t('gui_chk_edit'),
-            variable=self.edit_var,
-            command=self._on_edit_check_toggled
+            variable=self.edit_var
         )
         self.chk_edit.pack(anchor=tk.W, pady=(2, 4))
-
-        # Audacity 路徑選取列
-        aud_row = ttk.Frame(self.grp_opts)
-        aud_row.pack(fill=tk.X, pady=(2, 0))
-
-        self.lbl_aud_path = ttk.Label(aud_row, text=t('gui_lbl_audacity_path'))
-        self.lbl_aud_path.pack(side=tk.LEFT, padx=(0, 4))
-
-        self.entry_aud = ttk.Entry(aud_row, textvariable=self.audacity_path_var)
-        self.entry_aud.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 6))
-
-        self.btn_browse_aud = ttk.Button(
-            aud_row,
-            text=t('gui_btn_audacity'),
-            command=self._choose_audacity_exe,
-            padding=[8, 4]
-        )
-        self.btn_browse_aud.pack(side=tk.LEFT)
-
-        # Audacity 探測狀態小標籤
-        self.lbl_aud_status = ttk.Label(self.grp_opts, text="", font=self.app.font_std)
-        self.lbl_aud_status.pack(anchor=tk.W, pady=(2, 0))
-        self._update_audacity_status_display()
 
         # ── 5. 步驟 4: 執行與進度群組 (Card 4: Action & Progress) ──
         self.action_frame = ttk.Frame(self.main_container)
@@ -374,13 +319,9 @@ class AuPunchGUI:
         self.btn_browse_dest.config(text=t('gui_btn_browse'))
 
         self.grp_opts.config(text=t('gui_opt_group'))
-        self.rb_target_ardour.config(text=t('gui_target_ardour'))
-        self.rb_target_aup.config(text=t('gui_target_aup'))
         self.rb_flac.config(text=t('gui_fmt_flac'))
         self.rb_wav.config(text=t('gui_fmt_wav'))
         self.chk_edit.config(text=t('gui_chk_edit'))
-        self.lbl_aud_path.config(text=t('gui_lbl_audacity_path'))
-        self.btn_browse_aud.config(text=t('gui_btn_audacity'))
 
         if hasattr(self, 'lbl_footer_ver'):
             self.lbl_footer_ver.config(text=t('gui_footer_version'))
@@ -389,48 +330,6 @@ class AuPunchGUI:
         if not self.is_running:
             self.btn_start.config(text=t('gui_btn_start'))
             self.status_var.set(t('gui_status_ready'))
-
-        self._update_audacity_status_display()
-
-    def _update_audacity_status_display(self):
-        path_str = self.audacity_path_var.get().strip()
-        exe = find_audacity_exe(path_str if path_str else None)
-        if exe and exe.is_file():
-            self.lbl_aud_status.config(
-                text=f"{t('gui_audacity_detected')} {exe.name} ({exe.parent})",
-                foreground="#28a745" if not self.app.is_dark else "#98c379"
-            )
-        else:
-            self.lbl_aud_status.config(
-                text=t('gui_audacity_not_found'),
-                foreground="#6c757d" if not self.app.is_dark else "#abb2bf"
-            )
-
-    def _on_edit_check_toggled(self):
-        if self.edit_var.get():
-            # If checked, ensure we have a valid Audacity path
-            path_str = self.audacity_path_var.get().strip()
-            exe = find_audacity_exe(path_str if path_str else None)
-            if not exe:
-                self.app.showwarning(
-                    t('gui_title'),
-                    t('gui_warn_no_audacity')
-                )
-                self._choose_audacity_exe()
-
-    def _choose_audacity_exe(self):
-        filetypes = [("Audacity Executable", "audacity.exe;Audacity.app;audacity"), ("All Files", "*.*")]
-        chosen = filedialog.askopenfilename(
-            title=t('gui_btn_audacity'),
-            filetypes=filetypes,
-            parent=self.root
-        )
-        if chosen and os.path.isfile(chosen):
-            resolved = str(Path(chosen).resolve())
-            self.audacity_path_var.set(resolved)
-            self.app.config.set("audacity_path", resolved)
-            self._update_audacity_status_display()
-            self.app.show_toast(f"Audacity path set: {Path(chosen).name}", level="success")
 
     def _choose_folder(self):
         folder = filedialog.askdirectory(title=t('gui_btn_folder'), parent=self.root)
@@ -495,7 +394,6 @@ class AuPunchGUI:
         self.app.config.set("last_source", src)
         self.app.config.set("last_output", out)
         self.app.config.set("format", self.format_var.get())
-        self.app.config.set("target", self.target_var.get())
         self.app.config.set("auto_open", self.edit_var.get())
         self.app.config.save()
 
@@ -509,13 +407,11 @@ class AuPunchGUI:
     def _worker(self, src_path, out_path):
         from auPunch import AuPunchRunner
         use_wav = (self.format_var.get() == "wav")
-        target_mode = self.target_var.get()
-        runner = AuPunchRunner(src_path, out_path, use_wav=use_wav, target=target_mode)
+        runner = AuPunchRunner(src_path, out_path, use_wav=use_wav)
         
         projects = runner.scan_sources()
         total = len(projects)
-        target_title = "Ardour DAW 會話 (.ardour)" if target_mode == "ardour" else "Audacity 2.4.2++ (.aup)"
-        self._log(f"[*] 找到 {total} 個專案，開始抽脂處理 (目標格式: {target_title})...")
+        self._log(f"[*] 找到 {total} 個專案，開始抽脂並轉換至 Ardour DAW 會話...")
 
         for idx, p in enumerate(projects, 1):
             base_name = p['base_name']
@@ -524,12 +420,8 @@ class AuPunchGUI:
 
             # Check resume
             proj_out_dir = Path(out_path) / base_name
-            if target_mode == "ardour":
-                target_file = proj_out_dir / f"{base_name}.ardour"
-                target_media = proj_out_dir / "interchange" / base_name / "audiofiles"
-            else:
-                target_file = proj_out_dir / f"{base_name}.aup"
-                target_media = proj_out_dir / "media"
+            target_file = proj_out_dir / f"{base_name}.ardour"
+            target_media = proj_out_dir / "interchange" / base_name / "audiofiles"
 
             if target_file.exists() and target_media.exists() and any(target_media.iterdir()):
                 self._log(t('gui_status_skipped', current=idx, total=total, name=base_name))
@@ -538,7 +430,7 @@ class AuPunchGUI:
             try:
                 # Handle single conversion
                 if p['type'] == 'local':
-                    res = runner.converter.convert(p['path'], out_path, use_wav=use_wav, target=target_mode)
+                    res = runner.converter.convert(p['path'], out_path, use_wav=use_wav)
                 else:
                     # Archive single extraction
                     clean_f = runner.scratch_dir / f"{base_name}.aup3"
@@ -549,7 +441,7 @@ class AuPunchGUI:
                         capture_output=True
                     )
                     ext_f = list(runner.scratch_dir.glob("*.aup3"))[0]
-                    res = runner.converter.convert(ext_f, out_path, use_wav=use_wav, target=target_mode)
+                    res = runner.converter.convert(ext_f, out_path, use_wav=use_wav)
                     for f in runner.scratch_dir.glob("*"):
                         try: f.unlink()
                         except Exception: pass
@@ -563,23 +455,13 @@ class AuPunchGUI:
         self._set_status(t('gui_complete_msg'))
         self._log(f"\n{t('gui_complete_msg')} 輸出目錄: {out_path}\n")
 
-        # Open in Audacity or Explorer if requested
+        # Open in Explorer if requested
         if self.edit_var.get():
-            if target_mode == "ardour":
-                self._log(f"[*] 正在開啟成果目錄: {out_path} ...")
-                try:
-                    os.startfile(out_path)
-                except Exception:
-                    pass
-            else:
-                aup_files = list(Path(out_path).glob("**/*.aup"))
-                if aup_files:
-                    target_aup = aup_files[0]
-                    custom_aud = self.audacity_path_var.get().strip() or None
-                    self._log(f"[*] 正在以前台視窗開啟 Audacity: {target_aup.name} ...")
-                    launched = launch_audacity(target_aup, custom_exe=custom_aud)
-                    if not launched:
-                        self._log("[!] 無法啟動 Audacity，請確認執行檔路徑是否正確。")
+            self._log(f"[*] 正在開啟成果目錄: {out_path} ...")
+            try:
+                os.startfile(out_path)
+            except Exception:
+                pass
 
         def finish():
             self.btn_start.config(text=t('gui_btn_start'), state=tk.NORMAL)
@@ -605,12 +487,10 @@ def launch_gui(source="", output=""):
         get_text("gui_title"),
         "aupunch_app",
         defaults={
-            "geometry": "840x760",
+            "geometry": "840x700",
             "ui_scale": 1.0,
             "format": "flac",
-            "target": "ardour",
-            "auto_open": False,
-            "audacity_path": ""
+            "auto_open": False
         }
     )
     gui = AuPunchGUI(app_wrapper, default_source=init_src, default_output=init_out)

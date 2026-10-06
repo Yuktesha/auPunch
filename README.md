@@ -46,10 +46,15 @@
 自 Audacity 3.0 被商業收購以來，專案改採單一 SQLite 資料庫格式（`.aup3`），並在架構上引發諸多困擾：
 - **專案體積急遽膨脹**：數百 MB 的音軌往往膨脹成數 GB 甚至幾十 GB 的資料庫黑洞。
 - **讀寫負擔巨大、容易損毀**：大量 I/O 導致編輯卡頓，且頻繁發生 SQLite WAL 損毀導致專案無法開啟。
-- **路徑解析缺陷與歷史包袱**：舊版 `.aup` 格式在新環境中若非在特定路徑開啟極易遺失路徑，甚至出現音訊遺失現象。
 
-**與其在歷史包袱中削足適履，不如直接擁抱世界級專業開源數位音訊工作站（DAW）—— Ardour！**  
-**auPunch** 能將臃腫的 `.aup3` 資料庫無損還原並轉檔為標準 **Ardour DAW 工程會話（`.ardour`）**，預設調用無損最高等級 FLAC 壓縮，**實測平均體積大砍 70% ~ 96.5%**！
+> [!IMPORTANT]
+> ### 🛑 為什麼徹底廢除並刪除 `.aup`（Audacity 2.x）匯出功能？
+> 經嚴謹實證，轉出的舊版 `.aup` 檔在跨目錄或由外部呼叫時存在致命缺陷。Audacity 2.x 的歷史 XML 格式採用了高度脆弱且水土不服的 `pcmaliasblockfile` 外部音訊區塊相對路徑解析機制，只要工程不在其特定工作目錄啟動，Audacity 即會出現無法解析路徑、波形顯示為空白靜音或拋出遺失檔案錯誤。  
+> 
+> **為免損及使用者的資料完整性與對本工具之信賴度，auPunch 已將舊版 `.aup` 轉換功能與相關工具全數徹底廢除並刪除。**  
+> 告別歷史包袱，**auPunch 全面進化為專注於直出世界級專業開源數位音訊工作站 —— Ardour DAW 工程會話（`.ardour`）**，享受工業級的穩定性、標準目錄架構與微秒級精準時間軸！
+
+---
 
 ### 📊 實測瘦身與轉檔成效 (Real-World Benchmarks)
 - **單一專案實測（110 Bababa.aup3）**：221 MB ➔ **41.7 MB** Ardour 會話（**-81.19%**，2 組立體聲軌道，14 個片段，轉檔耗時僅 3 秒）。
@@ -70,7 +75,7 @@ Audacity 3.x 強塞的 SQLite 資料庫美其名讓專案變「豐富完整（Ri
 ## 🌟 核心特色
 
 1. **🎛️ 直出原生 Ardour 專業 DAW 會話工程（Native Ardour Session by Default）**：
-   - 預設產生標準 Ardour 工程結構：`<ProjectName>/<ProjectName>.ardour` 與 `interchange/<ProjectName>/audiofiles/*.flac`。
+   - 產生標準 Ardour 工程結構：`<ProjectName>/<ProjectName>.ardour` 與 `interchange/<ProjectName>/audiofiles/*.flac`。
    - 啟動 Ardour 即可直接開箱即用，無需手動重新連結音檔。
 2. **🎧 智慧立體聲對軌識別與合併（Smart Stereo Pair Recombination）**：
    - Audacity 會將雙聲道立體聲拆為兩個獨立的單聲道軌道（`channel="0"` 與 `channel="1"`）。
@@ -90,8 +95,6 @@ Audacity 3.x 強塞的 SQLite 資料庫美其名讓專案變「豐富完整（Ri
    - 支援 Windows DWM 沉浸式暗色/淺色標題列、`Ctrl+T` 即時切換深淺色主題、動態字體與高 DPI 自適應。
    - 內建四國語言切換（`zh_TW` 臺灣正體、`en_US` 美式英語、`zh_CN` 大陸簡體、`ja_JP` 日本語）。
    - 內建專屬 Consolas 終端機日誌視窗（含匯出與清空工具列）。
-8. **🔙 舊版 Audacity 相容模式（Legacy Compatibility Mode）**：
-   - 透過 `--target aup` 可選擇轉為 Audacity 2.4.2++ 架構（`.aup` 專案檔 ＋ `media/` 音訊目錄）。
 
 ---
 
@@ -120,11 +123,11 @@ python auPunch.py --source "C:\MyProjects" --output "C:\MyProjects_slim"
 # 串流滾動抽脂 7z 壓縮檔為 Ardour 會話（免預先解壓縮，零硬碟膨脹壓力）
 python auPunch.py --source "C:\audacity_projects.7z" --output "C:\slim_out"
 
+# 單一專案檔案直接轉換
+python auPunch.py --source "C:\MyProjects\Song.aup3" --output "C:\MyProjects_slim"
+
 # 指定輸出未壓縮 WAV（最大相容模式）
 python auPunch.py --source "C:\MyProjects" --output "C:\MyProjects_wav" --wav
-
-# 抽脂為舊版 Audacity 相容格式 (.aup)
-python auPunch.py --source "C:\MyProjects" --output "C:\MyProjects_aup" --target aup
 
 # 轉換完成後自動開啟成果目錄
 python auPunch.py --source "C:\MyProjects" --edit
@@ -134,11 +137,10 @@ python auPunch.py --source "C:\MyProjects" --edit
 | 參數 | 簡寫 | 說明 |
 | :--- | :--- | :--- |
 | `--source <path>` | `-s` | 來源路徑（支援 `.7z` 壓縮檔、單一 `.aup3` 或包含 `.aup3` 的資料夾） |
-| `--output <dir>` | `-o` | 輸出目錄（轉檔後專案存放位置） |
-| `--target <format>` | `-t` | 目標 DAW 格式：`ardour`（預設，直出原生 Ardour 會話）或 `aup`（舊版 Audacity 相容） |
+| `--output <dir>` | `-o` | 輸出目錄（轉檔後 Ardour 專案存放位置） |
 | `--wav` | | 指定輸出標準未壓縮 WAV（預設為無損高效 FLAC） |
 | `--limit <N>` | | 限制模式：僅處理前 N 個專案（測試用） |
-| `--edit` | | 轉換完成後自動開啟專案成果（自動探測 DAW 或開啟目錄） |
+| `--edit`, `-e` | | 轉換完成後在檔案總管中自動開啟成果目錄 |
 | `--gui` | `-g`, `-G` | 啟動圖形化使用者介面 (UniversalUI GUI) |
 | `--help` | `-h`, `--?` | 顯示說明訊息並退出 |
 
@@ -148,13 +150,18 @@ python auPunch.py --source "C:\MyProjects" --edit
 
 ## 📖 The Core Problem & Motivation
 
-Since Audacity 3.0 was acquired commercially, projects shifted to a single monolithic SQLite database format (`.aup3`). While conceptually neat, this architectural decision introduced severe issues:
+Since Audacity 3.0 was acquired commercially, projects shifted to a single monolithic SQLite database format (`.aup3`), introducing severe real-world problems:
 - **Catastrophic Project Bloat**: Modest audio sessions of a few hundred megabytes swell into multi-gigabyte monolithic databases.
 - **Sluggish Performance & High Failure Rates**: Massive I/O overhead leads to stuttering and frequent SQLite WAL corruption, often resulting in unrecoverable project loss.
-- **Path Fragility in Legacy Formats**: Old `.aup` XML format easily loses referenced audio blocks when executed from outside the session directory.
 
-**Rather than cutting feet to fit the shoes of legacy software, leap forward into the world-class open-source Digital Audio Workstation — Ardour!**  
-**auPunch** deconstructs bloated `.aup3` database projects and converts them directly into native **Ardour DAW Sessions (`.ardour`)** with bit-perfect lossless **FLAC** audio stems — slashing disk usage by **70% to 96.5%**!
+> [!IMPORTANT]
+> ### 🛑 Why was `.aup` (Audacity 2.x) export permanently removed?
+> Practical validation confirmed that legacy `.aup` projects produced outside specific process directories are fundamentally broken. Audacity 2.x relies on a brittle `pcmaliasblockfile` relative block resolution mechanism that consistently fails when launched from external folders or scripts, causing blank/silent waveforms and missing file errors.  
+> 
+> **To safeguard user data integrity and preserve trust, all legacy `.aup` conversion code and helper utilities have been completely stripped from auPunch.**  
+> auPunch now focuses 100% on direct conversion into the world-class open-source Digital Audio Workstation — **Ardour DAW Sessions (`.ardour`)**, delivering professional-grade stability and sample-accurate timeline precision!
+
+---
 
 ### 📊 Benchmark Results
 - **Single Project (110 Bababa.aup3)**: 221 MB ➔ **41.7 MB** Ardour session (**-81.19%** reduction, 2 stereo tracks, 14 clips, finished in 3s).
@@ -195,8 +202,6 @@ Audacity 3.x's SQLite monolithic database was marketed as making projects "riche
    - Features Windows DWM immersive titlebar, instant `Ctrl+T` dark/light theme switching, dynamic typography, and high-DPI scaling.
    - Multi-language matrix (`zh_TW`, `en_US`, `zh_CN`, `ja_JP`) with instant live retranslation.
    - Built-in Consolas terminal-style Live Console with log export and clear capabilities.
-8. **🔙 Legacy Audacity Compatibility Mode**:
-   - Converts to Audacity 2.4.2++ (`.aup` + `media/`) via `--target aup`.
 
 ---
 
@@ -225,13 +230,13 @@ python auPunch.py --source "C:\MyProjects" --output "C:\MyProjects_slim"
 # Stream-convert projects directly from 7z archive into Ardour sessions
 python auPunch.py --source "C:\audacity_projects.7z" --output "C:\slim_out"
 
+# Convert a single project file directly
+python auPunch.py --source "C:\MyProjects\Song.aup3" --output "C:\MyProjects_slim"
+
 # Convert with uncompressed WAV
 python auPunch.py --source "C:\MyProjects" --output "C:\MyProjects_wav" --wav
 
-# Convert to legacy Audacity 2.4.2++ format
-python auPunch.py --source "C:\MyProjects" --output "C:\MyProjects_aup" --target aup
-
-# Convert and automatically open destination folder
+# Convert and automatically open destination folder in File Explorer
 python auPunch.py --source "C:\MyProjects" --edit
 ```
 
@@ -239,11 +244,10 @@ python auPunch.py --source "C:\MyProjects" --edit
 | Option | Short | Description |
 | :--- | :--- | :--- |
 | `--source <path>` | `-s` | Source path (.7z archive, single `.aup3`, or directory containing `.aup3` files) |
-| `--output <dir>` | `-o` | Destination directory for converted slim projects |
-| `--target <format>`| `-t` | Target DAW format: `ardour` (default, native Ardour session) or `aup` (legacy Audacity) |
+| `--output <dir>` | `-o` | Destination directory for converted slim Ardour projects |
 | `--wav` | | Output uncompressed standard WAV instead of default FLAC |
 | `--limit <N>` | | Limit processing to first N projects (for testing) |
-| `--edit` | | Auto-open converted project or destination when finished |
+| `--edit`, `-e` | | Auto-open destination folder in File Explorer when finished |
 | `--gui` | `-g`, `-G` | Launch Graphical User Interface (UniversalUI) |
 | `--help` | `-h`, `--?` | Display help information and exit |
 
@@ -253,25 +257,19 @@ python auPunch.py --source "C:\MyProjects" --edit
 
 ```text
 auPunch/
-├── auPunch.py            # CLI entry point & batch conversion orchestrator
-├── gui.py                # UniversalUI desktop application
-├── ardour_exporter.py    # Native Ardour DAW Session (.ardour) XML generator
-├── aup3_converter.py     # SQLite .aup3 deconstruction & conversion engine
+├── auPunch.py              # CLI entry point & batch conversion orchestrator
+├── gui.py                  # UniversalUI desktop application
+├── ardour_exporter.py      # Native Ardour DAW Session (.ardour) XML generator
+├── aup3_converter.py       # SQLite .aup3 deconstruction & Ardour conversion engine
 ├── test_ardour_exporter.py # Unit tests for Ardour session generation
-├── test_converter.py     # Unit tests for converter pipeline
-├── auPunchLauncher.py    # Smart DAW & Audacity dispatcher
-├── AupPackager.py        # Project consolidator & external media packager
-├── i18n.py               # Multi-language bridge module
+├── i18n.py                 # Multi-language bridge module
 ├── _lang/
-│   └── languages.tsv     # Tab-separated multi-language matrix (zh_TW, en_US, zh_CN, ja_JP)
-├── _lib/                 # UniversalUI self-contained core runtime library
-├── tools/                # audacity-project-tools helper binary
-├── auPunch.ps1           # UTF-8 BOM PowerShell CLI wrapper
-├── auPunchLauncher.ps1   # Dispatcher PowerShell wrapper
-├── AupPackager.ps1       # Packager PowerShell wrapper
-├── 關聯選單設定.ps1      # Context menu registration script
-├── LICENSE               # MIT License
-└── README.md             # Project documentation (Bilingual)
+│   └── languages.tsv       # Tab-separated multi-language matrix (zh_TW, en_US, zh_CN, ja_JP)
+├── _lib/                   # UniversalUI self-contained core runtime library
+├── tools/                  # audacity-project-tools helper binary
+├── auPunch.ps1             # UTF-8 BOM PowerShell CLI wrapper
+├── LICENSE                 # MIT License
+└── README.md               # Project documentation (Bilingual)
 ```
 
 ---

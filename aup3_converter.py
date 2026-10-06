@@ -52,15 +52,11 @@ class Aup3Converter:
         if not os.path.exists(self.tool_path):
             raise FileNotFoundError(f"audacity-project-tools.exe not found at: {self.tool_path}")
 
-    def convert(self, aup3_path, output_dir, use_wav=False, target="ardour"):
+    def convert(self, aup3_path, output_dir, use_wav=False):
         """
-        轉換 AUP3 專案檔。
-        預設目標為 Ardour DAW 工程 (target='ardour')。
+        轉換 AUP3 專案檔為原生 Ardour DAW 會話工程目錄。
         """
-        if target == "ardour":
-            return self.convert_to_ardour(aup3_path, output_dir, use_wav=use_wav)
-        else:
-            return self.convert_to_aup2(aup3_path, output_dir, use_wav=use_wav)
+        return self.convert_to_ardour(aup3_path, output_dir, use_wav=use_wav)
 
     def convert_to_ardour(self, aup3_path, output_dir, use_wav=False):
         """
@@ -354,165 +350,12 @@ class Aup3Converter:
             if temp_work_dir.exists():
                 shutil.rmtree(temp_work_dir, ignore_errors=True)
 
-    def convert_to_aup2(self, aup3_path, output_dir, use_wav=False):
-        """
-        舊版相容模式：轉換為 2.4.2++ .aup
-        """
-        aup3_path = Path(aup3_path).resolve()
-        proj_base_name = aup3_path.stem
-        orig_size = aup3_path.stat().st_size
-
-        out_proj_dir = Path(output_dir) / proj_base_name
-        out_media_dir = out_proj_dir / "media"
-        out_data_dir = out_proj_dir / f"{proj_base_name}_data"
-        out_aup_file = out_proj_dir / f"{proj_base_name}.aup"
-
-        out_media_dir.mkdir(parents=True, exist_ok=True)
-        out_data_dir.mkdir(parents=True, exist_ok=True)
-
-        temp_work_dir = Path(tempfile.mkdtemp(prefix="aup_"))
-        temp_aup3 = temp_work_dir / "proj.aup3"
-        shutil.copy2(aup3_path, temp_aup3)
-
-        try:
-            cmd_xml = [self.tool_path, "-extract_project", "proj.aup3"]
-            subprocess.run(cmd_xml, cwd=str(temp_work_dir), capture_output=True, text=True)
-            extracted_xml = temp_work_dir / "proj.aup3.project.xml"
-
-            cmd_clips = [self.tool_path, "-extract_clips", "proj.aup3"]
-            subprocess.run(cmd_clips, cwd=str(temp_work_dir), capture_output=True, text=True)
-
-            found_clip_dirs = list(temp_work_dir.glob("**/clips"))
-            clips_dir = found_clip_dirs[0] if found_clip_dirs else (temp_work_dir / "clips")
-            clip_wav_files = sorted(list(clips_dir.glob("*.wav"))) if clips_dir.exists() else []
-
-            final_audio_paths = []
-            clip_media_map = {}
-
-            if clip_wav_files:
-                for wav_f in clip_wav_files:
-                    dest_audio_name = f"{wav_f.stem}.flac" if not use_wav else wav_f.name
-                    final_audio_path = out_media_dir / dest_audio_name
-                    if not use_wav:
-                        cmd_flac = [self.ffmpeg_path, "-i", str(wav_f), "-c:a", "flac", "-compression_level", "8", str(final_audio_path), "-y"]
-                        subprocess.run(cmd_flac, capture_output=True, text=True)
-                    else:
-                        shutil.move(str(wav_f), str(final_audio_path))
-                    final_audio_paths.append(final_audio_path)
-                    m = re.match(r'^(\d+)_(.*)_(\d+)_(.*)\.wav$', wav_f.name)
-                    abs_p = str(final_audio_path.resolve()).replace('\\', '/')
-                    if m:
-                        clip_media_map[(int(m.group(1)), int(m.group(3)))] = abs_p
-                    clip_media_map[wav_f.name] = abs_p
-
-                self._transform_xml_aup2(extracted_xml, out_aup_file, proj_base_name, clip_media_map=clip_media_map)
-            else:
-                cmd_audio = [self.tool_path, "-extract_as_stereo_track", "proj.aup3"]
-                subprocess.run(cmd_audio, cwd=str(temp_work_dir), capture_output=True, text=True)
-                extracted_wav = temp_work_dir / "proj_data" / "stereo.wav"
-                dest_audio_name = f"{proj_base_name}.flac" if not use_wav else f"{proj_base_name}.wav"
-                final_audio_path = out_media_dir / dest_audio_name
-                if not use_wav:
-                    cmd_flac = [self.ffmpeg_path, "-i", str(extracted_wav), "-c:a", "flac", "-compression_level", "8", str(final_audio_path), "-y"]
-                    subprocess.run(cmd_flac, capture_output=True, text=True)
-                else:
-                    shutil.move(str(extracted_wav), str(final_audio_path))
-                final_audio_paths.append(final_audio_path)
-                abs_p = str(final_audio_path.resolve()).replace('\\', '/')
-                self._transform_xml_aup2(extracted_xml, out_aup_file, proj_base_name, single_media_rel_path=abs_p)
-
-            final_total_size = out_aup_file.stat().st_size + sum(p.stat().st_size for p in final_audio_paths if p.exists())
-            saved_size = orig_size - final_total_size
-            return {
-                "success": True,
-                "project_name": proj_base_name,
-                "target": "aup",
-                "aup_file": str(out_aup_file),
-                "audio_files": [str(p) for p in final_audio_paths],
-                "format": "wav" if use_wav else "flac",
-                "orig_size": orig_size,
-                "final_size": final_total_size,
-                "saved_size": saved_size,
-                "saved_percent": round((saved_size / orig_size * 100.0) if orig_size > 0 else 0.0, 2),
-                "clips_count": len(final_audio_paths)
-            }
-        finally:
-            if temp_work_dir.exists():
-                shutil.rmtree(temp_work_dir, ignore_errors=True)
-
-    def _transform_xml_aup2(self, input_xml_path, output_aup_path, proj_name, single_media_rel_path=None, clip_media_map=None):
-        with open(input_xml_path, 'r', encoding='utf-8', errors='replace') as f:
-            xml_content = f.read()
-        xml_content = re.sub(r'&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)', '&amp;', xml_content)
-        root = ET.fromstring(xml_content)
-        tree = ET.ElementTree(root)
-        root.set('version', '1.3.0')
-        root.set('audacityversion', '2.4.2')
-        root.set('projname', f"{proj_name}_data")
-        for child in list(root):
-            if child.tag == qn('effects'):
-                root.remove(child)
-
-        clip_rel_paths = list(clip_media_map.values()) if clip_media_map else []
-        clip_idx = 0
-
-        for t_idx, track in enumerate(root.findall(qn('wavetrack'))):
-            ch = track.get('channel', '0')
-            orig_linked = track.get('linked', None)
-            if orig_linked is None:
-                track.set('linked', '1' if ch == '0' else '0')
-            track.set('sampleformat', '262159')
-            for c in list(track):
-                if c.tag == qn('effects'):
-                    track.remove(c)
-            for c_idx, clip in enumerate(track.findall(qn('waveclip'))):
-                for attr in ['centShift', 'pitchAndSpeedPreset', 'rawAudioTempo', 'clipStretchRatio', 'colorindex']:
-                    if attr in clip.attrib:
-                        del clip.attrib[attr]
-                seq = clip.find(qn('sequence'))
-                if seq is not None:
-                    max_samples = int(seq.get('maxsamples', '524288'))
-                    num_samples = int(seq.get('numsamples', '0'))
-                    seq.set('sampleformat', '262159')
-                    if 'effectivesampleformat' in seq.attrib:
-                        del seq.attrib['effectivesampleformat']
-                    if clip_media_map and (t_idx, c_idx) in clip_media_map:
-                        cur_media_rel = clip_media_map[(t_idx, c_idx)]
-                        is_clip_isolated = True
-                    elif clip_rel_paths and clip_idx < len(clip_rel_paths):
-                        cur_media_rel = clip_rel_paths[clip_idx]
-                        clip_idx += 1
-                        is_clip_isolated = True
-                    else:
-                        cur_media_rel = single_media_rel_path or "media/audio.flac"
-                        is_clip_isolated = False
-
-                    for wb in list(seq.findall(qn('waveblock'))):
-                        start = int(wb.get('start', '0'))
-                        alias_len = min(max_samples, num_samples - start)
-                        wb.attrib.clear()
-                        wb.set('start', str(start))
-                        alias_elem = ET.SubElement(wb, qn('pcmaliasblockfile'))
-                        alias_elem.set('aliasfile', cur_media_rel.replace('\\', '/'))
-                        alias_elem.set('aliasstart', str(start))
-                        alias_elem.set('aliaslen', str(alias_len))
-                        alias_elem.set('aliaschannel', '0' if is_clip_isolated else ch)
-
-        with open(output_aup_path, 'wb') as f:
-            f.write(b'<?xml version="1.0" standalone="no" ?>\n')
-            f.write(b'<!DOCTYPE project PUBLIC "-//audacityproject-1.3.0//DTD//EN" "http://audacity.sourceforge.net/xml/audacityproject-1.3.0.dtd" >\n')
-            tree.write(f, encoding='utf-8', xml_declaration=False)
-
-    def _transform_xml(self, *args, **kwargs):
-        return self._transform_xml_aup2(*args, **kwargs)
-
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        print("用法: python aup3_converter.py <path_to.aup3> <output_dir> [--ardour] [--aup] [--wav]")
+        print("用法: python aup3_converter.py <path_to.aup3> <output_dir> [--wav]")
         sys.exit(1)
 
     use_wav_flag = "--wav" in sys.argv
-    target_mode = "aup" if "--aup" in sys.argv else "ardour"
     converter = Aup3Converter()
-    stats = converter.convert(sys.argv[1], sys.argv[2], use_wav=use_wav_flag, target=target_mode)
+    stats = converter.convert(sys.argv[1], sys.argv[2], use_wav=use_wav_flag)
     print("轉換成果:", stats)
