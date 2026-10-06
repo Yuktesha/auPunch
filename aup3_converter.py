@@ -52,13 +52,13 @@ class Aup3Converter:
         if not os.path.exists(self.tool_path):
             raise FileNotFoundError(f"audacity-project-tools.exe not found at: {self.tool_path}")
 
-    def convert(self, aup3_path, output_dir, use_wav=False):
+    def convert(self, aup3_path, output_dir, use_wav=False, ardour_version=7002):
         """
         轉換 AUP3 專案檔為原生 Ardour DAW 會話工程目錄。
         """
-        return self.convert_to_ardour(aup3_path, output_dir, use_wav=use_wav)
+        return self.convert_to_ardour(aup3_path, output_dir, use_wav=use_wav, ardour_version=ardour_version)
 
-    def convert_to_ardour(self, aup3_path, output_dir, use_wav=False):
+    def convert_to_ardour(self, aup3_path, output_dir, use_wav=False, ardour_version=7002):
         """
         將單一 .aup3 專案轉換為標準 Ardour Session 目錄：
         <output_dir>/<ProjectName>/
@@ -318,7 +318,7 @@ class Aup3Converter:
                 })
 
             # 3. 輸出 Ardour Session XML
-            exporter = ArdourExporter(project_name=proj_base_name, sample_rate=sample_rate)
+            exporter = ArdourExporter(project_name=proj_base_name, sample_rate=sample_rate, ardour_version=ardour_version)
             out_ardour_file = exporter.export_session(output_dir=output_dir, tracks_data=ardour_tracks)
 
             # 4. 計算統計與壓縮率
@@ -332,6 +332,7 @@ class Aup3Converter:
                 "success": True,
                 "project_name": proj_base_name,
                 "target": "ardour",
+                "ardour_version": ardour_version,
                 "session_file": str(out_ardour_file),
                 "ardour_file": str(out_ardour_file),
                 "session_dir": str(out_proj_dir),
@@ -352,10 +353,17 @@ class Aup3Converter:
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        print("用法: python aup3_converter.py <path_to.aup3> <output_dir> [--wav]")
+        print("用法: python aup3_converter.py <path_to.aup3> <output_dir> [--wav] [--ardour-version {7002, 3002}]")
         sys.exit(1)
 
     use_wav_flag = "--wav" in sys.argv
+    ardour_ver = 7002
+    for arg in sys.argv:
+        if arg in ["--legacy", "--3002"]:
+            ardour_ver = 3002
+        elif arg in ["--modern", "--7002", "--latest"]:
+            ardour_ver = 7002
+
     converter = Aup3Converter()
-    stats = converter.convert(sys.argv[1], sys.argv[2], use_wav=use_wav_flag)
+    stats = converter.convert(sys.argv[1], sys.argv[2], use_wav=use_wav_flag, ardour_version=ardour_ver)
     print("轉換成果:", stats)

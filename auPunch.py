@@ -57,6 +57,7 @@ def print_localized_help(lang=None):
     print(f"⚙️  {t('options')}:")
     print(f"    -s, --source <path>     {t('opt_source')}")
     print(f"    -o, --output <dir>      {t('opt_output')}")
+    print(f"    -v, --ver, --ardour-version <ver>  {t('opt_ardour_ver')}")
     print(f"    --wav                   {t('opt_wav')}")
     print(f"    --limit <N>             {t('opt_limit')}")
     print(f"    --edit                  {t('opt_edit')}")
@@ -75,10 +76,11 @@ def print_localized_help(lang=None):
     print("A Solid GUI Studio X MVlab")
 
 class AuPunchRunner:
-    def __init__(self, source_path, output_dir, scratch_dir=None, seven_zip=r"C:\scoop\shims\7z.exe", use_wav=False):
+    def __init__(self, source_path, output_dir, scratch_dir=None, seven_zip=r"C:\scoop\shims\7z.exe", use_wav=False, ardour_version=7002):
         self.source_path = Path(source_path).resolve()
         self.output_dir = Path(output_dir).resolve()
         self.use_wav = use_wav
+        self.ardour_version = int(ardour_version)
         
         base_dir = Path(__file__).resolve().parent
         if scratch_dir is None:
@@ -145,8 +147,9 @@ class AuPunchRunner:
         total_orig_bytes = sum(p['size'] for p in projects)
         audio_fmt_str = "標準未壓縮 WAV (最高相容性)" if self.use_wav else "預設無損高效 FLAC (極限壓縮，體積砍 70%~96%)"
         source_mode_str = f"7z 壓縮檔滾動串流 ({self.source_path.name})" if self.is_archive else f"本地母體目錄直接抽脂 ({self.source_path})"
+        ver_desc = f"Ardour 7/8/9+ 最新版 ({self.ardour_version}，直入無彈窗，推薦)" if self.ardour_version == 7002 else f"Ardour 3/4/5/6 舊版相容 ({self.ardour_version})"
         print(f"[+] 來源模式: {source_mode_str}")
-        print(f"[+] 目標格式: 原生 Ardour DAW 會話工程 (.ardour)")
+        print(f"[+] 目標格式: 原生 Ardour DAW 會話工程 (.ardour) [{ver_desc}]")
         print(f"[+] 專案總計未壓縮體積約: {total_orig_bytes / (1024**3):.2f} GB")
         print(f"[+] 音訊壓縮格式: {audio_fmt_str}")
         print(f"[+] 輸出目標目錄: {self.output_dir}")
@@ -227,7 +230,7 @@ class AuPunchRunner:
             print(f"    ├─ [{step_label}] 執行抽脂並轉換至 Ardour DAW 會話工程 ({fmt_label})...")
             t1 = time.time()
             try:
-                res = self.converter.convert(target_aup3_to_convert, self.output_dir, use_wav=self.use_wav)
+                res = self.converter.convert(target_aup3_to_convert, self.output_dir, use_wav=self.use_wav, ardour_version=self.ardour_version)
                 conv_duration = time.time() - t1
                 
                 saved_mb = res['saved_size'] / (1024*1024)
@@ -309,6 +312,7 @@ def main():
     parser = argparse.ArgumentParser(description="auPunch: Punch your Audacity 3.x projects into Native Ardour DAW Sessions & FLAC (MVlab)", add_help=False)
     parser.add_argument("--source", "-s", default=default_source, help="Source path (.7z archive, directory containing .aup3 files, or single .aup3)")
     parser.add_argument("--output", "-o", default=default_out, help="Output destination directory")
+    parser.add_argument("--ardour-version", "--ver", "-v", default="7002", help="Target Ardour version (7002 or latest for Ardour 7/8/9+; 3002 or legacy for Ardour 3-6)")
     parser.add_argument("--scratch", default=None, help="Scratch directory for single file archive extraction")
     parser.add_argument("--wav", action="store_true", help="Output uncompressed WAV instead of default FLAC")
     parser.add_argument("--limit", type=int, help="Limit processing to first N projects")
@@ -316,7 +320,10 @@ def main():
     parser.add_argument("--gui", "-g", action="store_true", help="Launch Graphical User Interface")
 
     args = parser.parse_args()
-    runner = AuPunchRunner(args.source, args.output, scratch_dir=args.scratch, use_wav=args.wav)
+    ver_map = {"7002": 7002, "latest": 7002, "new": 7002, "3002": 3002, "legacy": 3002, "old": 3002}
+    ardour_ver = ver_map.get(str(args.ardour_version).strip().lower(), 7002)
+
+    runner = AuPunchRunner(args.source, args.output, scratch_dir=args.scratch, use_wav=args.wav, ardour_version=ardour_ver)
     runner.run(limit=args.limit)
 
     if args.edit:

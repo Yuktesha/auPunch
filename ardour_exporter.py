@@ -32,9 +32,10 @@ class IdGenerator:
 
 
 class ArdourExporter:
-    def __init__(self, project_name: str, sample_rate: int = 48000):
+    def __init__(self, project_name: str, sample_rate: int = 48000, ardour_version: int = 7002):
         self.project_name = project_name
         self.sample_rate = sample_rate
+        self.ardour_version = int(ardour_version)
         self.id_gen = IdGenerator(start_id=100)
 
     def generate_ardour_xml(self, tracks_data: List[Dict[str, Any]], session_end_samples: int = 0) -> str:
@@ -73,7 +74,7 @@ class ArdourExporter:
 
         # 根節點
         root = ET.Element("Session")
-        root.set("version", "3002")
+        root.set("version", str(self.ardour_version))
         root.set("name", self.project_name)
         root.set("sample-rate", str(self.sample_rate))
         root.set("end-is-free", "yes")

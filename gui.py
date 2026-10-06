@@ -50,11 +50,13 @@ class AuPunchGUI:
         saved_src = self.app.config.get("last_source", default_source)
         saved_out = self.app.config.get("last_output", default_output)
         saved_fmt = self.app.config.get("format", "flac")
+        saved_ardour_ver = str(self.app.config.get("ardour_version", "7002"))
         saved_edit = self.app.config.get("auto_open", False)
 
         self.source_var = tk.StringVar(value=saved_src)
         self.output_var = tk.StringVar(value=saved_out)
         self.format_var = tk.StringVar(value=saved_fmt)
+        self.ardour_ver_var = tk.StringVar(value=saved_ardour_ver)
         self.edit_var = tk.BooleanVar(value=saved_edit)
         self.status_var = tk.StringVar(value=t('gui_status_ready'))
         self.progress_var = tk.DoubleVar(value=0.0)
@@ -204,7 +206,31 @@ class AuPunchGUI:
 
         # 分隔線
         sep = ttk.Separator(self.grp_opts, orient=tk.HORIZONTAL)
-        sep.pack(fill=tk.X, pady=4)
+        sep.pack(fill=tk.X, pady=5)
+
+        # Ardour 版本選擇 (預設 7002 = Ardour 7/8/9+ 最新版)
+        self.lbl_ver_title = ttk.Label(self.grp_opts, text=t('gui_ardour_ver_title'), font=self.app.font_bold)
+        self.lbl_ver_title.pack(anchor=tk.W, pady=(2, 3))
+
+        self.rb_ver_latest = ttk.Radiobutton(
+            self.grp_opts,
+            text=t('gui_ardour_ver_latest'),
+            value="7002",
+            variable=self.ardour_ver_var
+        )
+        self.rb_ver_latest.pack(anchor=tk.W, pady=(0, 3))
+
+        self.rb_ver_legacy = ttk.Radiobutton(
+            self.grp_opts,
+            text=t('gui_ardour_ver_legacy'),
+            value="3002",
+            variable=self.ardour_ver_var
+        )
+        self.rb_ver_legacy.pack(anchor=tk.W, pady=(0, 6))
+
+        # 分隔線 2
+        sep2 = ttk.Separator(self.grp_opts, orient=tk.HORIZONTAL)
+        sep2.pack(fill=tk.X, pady=5)
 
         # 轉換完成後自動開啟成果目錄
         self.chk_edit = ttk.Checkbutton(
@@ -321,6 +347,10 @@ class AuPunchGUI:
         self.grp_opts.config(text=t('gui_opt_group'))
         self.rb_flac.config(text=t('gui_fmt_flac'))
         self.rb_wav.config(text=t('gui_fmt_wav'))
+        if hasattr(self, 'lbl_ver_title'):
+            self.lbl_ver_title.config(text=t('gui_ardour_ver_title'))
+            self.rb_ver_latest.config(text=t('gui_ardour_ver_latest'))
+            self.rb_ver_legacy.config(text=t('gui_ardour_ver_legacy'))
         self.chk_edit.config(text=t('gui_chk_edit'))
 
         if hasattr(self, 'lbl_footer_ver'):
@@ -394,6 +424,7 @@ class AuPunchGUI:
         self.app.config.set("last_source", src)
         self.app.config.set("last_output", out)
         self.app.config.set("format", self.format_var.get())
+        self.app.config.set("ardour_version", self.ardour_ver_var.get())
         self.app.config.set("auto_open", self.edit_var.get())
         self.app.config.save()
 
@@ -407,11 +438,13 @@ class AuPunchGUI:
     def _worker(self, src_path, out_path):
         from auPunch import AuPunchRunner
         use_wav = (self.format_var.get() == "wav")
-        runner = AuPunchRunner(src_path, out_path, use_wav=use_wav)
+        ardour_ver = int(self.ardour_ver_var.get())
+        runner = AuPunchRunner(src_path, out_path, use_wav=use_wav, ardour_version=ardour_ver)
         
         projects = runner.scan_sources()
         total = len(projects)
-        self._log(f"[*] 找到 {total} 個專案，開始抽脂並轉換至 Ardour DAW 會話...")
+        ver_desc = f"Ardour 7/8/9+ ({ardour_ver})" if ardour_ver == 7002 else f"Ardour 3/4/5/6 ({ardour_ver})"
+        self._log(f"[*] 找到 {total} 個專案，開始抽脂並轉換至 {ver_desc} 會話...")
 
         for idx, p in enumerate(projects, 1):
             base_name = p['base_name']
@@ -430,7 +463,7 @@ class AuPunchGUI:
             try:
                 # Handle single conversion
                 if p['type'] == 'local':
-                    res = runner.converter.convert(p['path'], out_path, use_wav=use_wav)
+                    res = runner.converter.convert(p['path'], out_path, use_wav=use_wav, ardour_version=ardour_ver)
                 else:
                     # Archive single extraction
                     clean_f = runner.scratch_dir / f"{base_name}.aup3"
@@ -441,7 +474,7 @@ class AuPunchGUI:
                         capture_output=True
                     )
                     ext_f = list(runner.scratch_dir.glob("*.aup3"))[0]
-                    res = runner.converter.convert(ext_f, out_path, use_wav=use_wav)
+                    res = runner.converter.convert(ext_f, out_path, use_wav=use_wav, ardour_version=ardour_ver)
                     for f in runner.scratch_dir.glob("*"):
                         try: f.unlink()
                         except Exception: pass
@@ -490,6 +523,7 @@ def launch_gui(source="", output=""):
             "geometry": "840x700",
             "ui_scale": 1.0,
             "format": "flac",
+            "ardour_version": "7002",
             "auto_open": False
         }
     )

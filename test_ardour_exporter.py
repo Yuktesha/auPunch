@@ -90,7 +90,7 @@ class TestArdourExporter(unittest.TestCase):
         tree = ET.parse(session_file)
         root = tree.getroot()
         self.assertEqual(root.tag, "Session")
-        self.assertEqual(root.get("version"), "3002")
+        self.assertEqual(root.get("version"), "7002")
         self.assertEqual(root.get("sample-rate"), "48000")
         self.assertEqual(root.get("name"), "TestSong")
 

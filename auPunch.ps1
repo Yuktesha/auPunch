@@ -6,6 +6,8 @@
 param(
     [string]$Source = "",
     [string]$Output = "",
+    [string]$ArdourVersion = "7002",
+    [string]$Ver = "",
     [switch]$Wav,
     [switch]$Edit,
     [switch]$GUI,
@@ -31,6 +33,8 @@ if ($GUI -or $G) {
 $ArgsList = @($PyScript)
 if ($Source) { $ArgsList += @("--source", $Source) }
 if ($Output) { $ArgsList += @("--output", $Output) }
+$TargetVer = if ($Ver) { $Ver } else { $ArdourVersion }
+if ($TargetVer) { $ArgsList += @("--ardour-version", $TargetVer) }
 if ($Wav) { $ArgsList += "--wav" }
 if ($Edit) { $ArgsList += "--edit" }
 if ($Limit -gt 0) { $ArgsList += @("--limit", $Limit.ToString()) }
